@@ -8,7 +8,9 @@ The MSSM model `multivariateSeaStorm.m` is written in Matlab in order to utilize
 
 The MSSM model requires the following inputs:  
 
-`
+
+`  Inputs:  
+
       sCopula              - copula to be fitted to storm variables; options are "c-vine", "d-vine", "gaussian", or "t-student"
                             
       sWIS_filename        - .onlns file downloaded from a USACE Wave Information Studies (WIS) bouy; must   <br />
@@ -32,19 +34,19 @@ In the example that follows, we utilize a 35 year record of hourly wave hindcast
 
 `[stStorms, stSimStorms] = multivariateSeaStorm("c-vine", "ST63183_v03.onlns", "Tide-8631044-Combined.txt", 0.04, 1.9, 20000, true, "StormList_20k_VCR_Berm1pt9m_Slope0pt04.csv")`
 
-<img align="left" width="600" height="600" src="Fig1-QC-VCR_Berm1pt9m_Slope0pt04.png">  
+<img align="left" width="300" height="300" src="Fig1-QC-VCR_Berm1pt9m_Slope0pt04.png">  
 
 Within `multivariateSeaStorm.m`, we first process the data by removing the 365-day (1 yr) running median. This differs from the 30-day running median used in Wahl et al. (2016), namely because we desired to maintain seasonal trends and only account for non-stationarity in wave and water level parameters due to inter-annual and decadal variability. The median of the last 3 years is then applied to the entire time series such that the new time series is representative of the current climate. A year-by-year tidal analysis is performed using t_Tide (Pawlowicz et al., 2002) to obtain the tidal amplitude $\eta_A$ and non-tidal residual $\eta_{NTR}$. Lastly, the representative highest elevation of the landward margin of runup (Rhigh, i.e. the total water level) is calculated as the sum of the maximum 2% exceedance of runup, following Stockdon et al. (2006), and the contemporaneous (corrected) water level elevation from the tide gauge. The representative lowest runup elevation (Rlow), below which any part of the barrier is considered continuously subaqueous during a storm, is taken as Rhigh – swash/2 (Figure 1). While wave direction is processed as part of the MSSM, it is not required as input for Barrier3D and is therefore not discussed herein.
 
 ### Figure 1. Timeseries corrected for non-stationarity due to inter-annual and decadal variability 
 
-<img align="left" width="600" height="600" src="Fig2-TWL-VCR_Berm1pt9m_Slope0pt04.png">
+<img align="left" width="300" height="300" src="Fig2-TWL-VCR_Berm1pt9m_Slope0pt04.png">
 
 Storm events are then extracted from the corrected time series using the same metrics as Wahl et al. (2016), i.e., we derive a set of storm events by conditioning on Hs. Events are identified as periods of 8 or more consecutive hours with deep-water significant wave heights greater than 2.1 m, or rather the minimum monthly averaged wave height for periods in which waters levels exceed the berm elevation (Figure 2). The remaining variables used to define the independent multivariate storm events for use in Barrier3D include $\eta_A$, $\eta_{NTR}$, $Tp$, and storm duration. We discard storms with concomitant values of surge that are negative and identify new storms when Hs drops below the 2.1 m threshold for 24 hours or more (cf. Li et al., 2014). This method results in 282 independent multivariate sea-storm events for the example inputs shown here.
 
 ### Figure 2. Wave height threshold used to define storms (i.e., the minimum monthly averaged wave height for periods when the TWL exceeded the berm elevation).
 
-<img align="left" width="600" height="600" src="Fig3-Hist-VCR_Berm1pt9m_Slope0pt04.png">
+<img align="left" width="300" height="300" src="Fig3-Hist-VCR_Berm1pt9m_Slope0pt04.png">
 
 ### Figure 3. Histograms of the empirical and synthetic storms
 
