@@ -1,6 +1,6 @@
 # A Multivariate Sea Storm Model
 
-Following the methods of Wahl et al. (2016), we develop a copula-based multivariate sea-storm model (MSSM) with functionality for gaussian, t-student, and vine copulas. The example MSSM model below is developed using wave hindcast and water-level data from the Virgina Coastal Reserve. This text is largely taken from the notebook provided in https://github.com/UNC-CECL/Barrier3D, the model for which the MSSM was originally developed. However, the MSSM can be used to generate synthetic storms for any tide-gauge and wave hindcast data.
+Following the methods of Wahl et al. (2016), we develop a copula-based multivariate sea-storm model (MSSM) with functionality for gaussian, t-student, and vine copulas. This text is largely taken from the notebook provided in https://github.com/UNC-CECL/Barrier3D, the model for which the MSSM was originally developed. However, the MSSM can be used to generate synthetic storms for any tide-gauge and wave hindcast data.
 
 The MSSM model `multivariateSeaStorm.m` is written in Matlab in order to utilize the t-tide package, which allows for robust fitting of tidal constituents to water level time series, and therefore sadly cannot be run in this notebook. We provide a sample call below and describe its components herein. 
 
@@ -8,8 +8,7 @@ The MSSM model `multivariateSeaStorm.m` is written in Matlab in order to utilize
 
 The MSSM model requires the following inputs:  
 
-` Inputs:  
-
+`
       sCopula              - copula to be fitted to storm variables; options are "c-vine", "d-vine", "gaussian", or "t-student"
                             
       sWIS_filename        - .onlns file downloaded from a USACE Wave Information Studies (WIS) bouy; must   <br />
