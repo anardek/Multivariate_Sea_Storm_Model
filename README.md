@@ -6,7 +6,8 @@ Following the methods of Wahl et al. (2016), we develop a copula-based multivari
 
 The MSSM model `multivariateSeaStorm.m` is written in Matlab in order to utilize the t-tide package, which allows for robust fitting of tidal constituents to water level time series. The MSSM model requires the following inputs: 
 
-`  Inputs:  
+```
+Inputs:  
 
       sCopula              - copula to be fitted to storm variables; options are "c-vine", "d-vine", "gaussian", or "t-student"
                             
@@ -25,7 +26,7 @@ The MSSM model `multivariateSeaStorm.m` is written in Matlab in order to utilize
       bPlot                - boolean for plotting  
       
       sOutputFilename      - string of prefix for csv output filename  
-`
+```
 
 In the example provided in the notebook at https://github.com/UNC-CECL/Barrier3D, we utilize a 35 year record of hourly wave hindcast data – including wave height (Hs) and wave period (Tp) – from the USACE’s Wave Information Studies buoy offshore Hog Island in the Virginia Coast Reserve (Station 63183, 22 m water depth) and hourly records of water level from the nearest NOAA tide gauge (Station 8631044, Wachapreague, VA) to create a list of 20,000 synthetic storms. We specify a berm elevation of 1.9 m (the average along Hog Island) and beach slope of 0.04. The c-vine produced the highest tau values (Kendall's Corelation Coefficient) over the elliptical Gaussian and T-student copulas, as well as the d-vine copula.
 
