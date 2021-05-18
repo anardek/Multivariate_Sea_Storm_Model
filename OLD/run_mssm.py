@@ -8,8 +8,8 @@ os.chdir(
 #     "/Users/KatherineAnardeWheels/PyCharmProjects/Barrier3D/Tools/Multivariate_Sea_Storm_Model"
 # )
 sCopula = "c-vine"
-sWIS_filename = "../ST63183_v03.onlns"
-sWaterLevel_filename = "../Tide-8631044-Combined.txt"
+sWIS_filename = "../example_input/ST63183_v03.onlns"
+sWaterLevel_filename = "../example_input/Tide-8631044-Combined.txt"
 fBeta = 0.04
 fBermEl = 1.9
 nSimStorm = 10000
