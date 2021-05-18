@@ -4,14 +4,16 @@ Following the methods of Wahl et al. (2016), we develop a copula-based multivari
 
 `[stStorms, stSimStorms] = multivariateSeaStorm(sCopula, sWIS_filename, sWaterLevel_filename, fBeta, fBermEl, nSimStorm, bPlot, sOutput_filename)`
 
-The MSSM model `multivariateSeaStorm.m` is written in Matlab in order to utilize the t-tide package, which allows for robust fitting of tidal constituents to water level time series. The MSSM model requires the following inputs: 
+The MSSM model `multivariateSeaStorm.m` is written in Matlab in order to utilize the t-tide package, which allows for robust fitting of tidal constituents to water level time series, but also calls the program `mssmVines.R` to use vine copulas from the `CDVine` package in `R`. There is one hardcoded directory in `mssmVines.R` that will need to be changed by the user based on the location of `Rscript`: ```#! /Library/Frameworks/R.framework/Resources/bin/Rscript```). Note that we followed the model of the MultiHazard toolbox https://github.com/rjaneUCF/MultiHazard for fitting and simulating from vine copulas, and thank them for an awesome toolbox.
+
+The MSSM model requires the following inputs: 
 
 ```
 Inputs:  
 
       sCopula              - copula to be fitted to storm variables; options are "c-vine", "d-vine", "gaussian", or "t-student"
                             
-      sWIS_filename        - .onlns file downloaded from a USACE Wave Information Studies (WIS) bouy; must   <br />
+      sWIS_filename        - .onlns file downloaded from a USACE Wave Information Studies (WIS) bouy; must
                              contain hourly records of wave height (m)  
                              
       sWaterLevel_filename - .txt file that contains hourly records of total water level in m NAVD88 as second column, first column is datetime; 
