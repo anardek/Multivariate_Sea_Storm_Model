@@ -1,9 +1,16 @@
 function [stStorms, stSimStorms] = multivariateSeaStorm(sCopula, ...
     sWIS_filename, sWaterLevel_filename, fBeta, fBermEl, nSimStorm, ...
-    bPlot, sOutput_filename)
+    bPlot, sOutput_filename, sDirectory, nStartYear, nZ)
 % [stStorms, stSimStorms] = multivariateSeaStorm("c-vine", ...
 %     'ST63183_v03.onlns', 'Tide-8631044-Combined.txt', 0.04, 1.9, 20000, ...
-%      true, "StormList_20k_VCR_Berm1pt9m_Slope0pt04.csv")
+%      true, "StormList_20k_VCR_Berm1pt9m_Slope0pt04.csv", 
+%      "./", 1980, 22)
+% [stStorms, stSimStorms] = multivariateSeaStorm("gaussian", 
+%       "ST63266-time_series-061090_061021.onlns", 
+%       "CO-OPS_8656483_COMBINED_Reduced.txt", 0.03, 1.46, 20000, 
+%       true, "StormList_20k_NCB_Berm1pt46m_Slope0pt03.csv", 
+%       "/Users/KatherineAnardeWheels/PycharmProjects/CASCADE/notebooks/synthetic_storm_creation_NCB/data", 
+%       1990, 24)
 %
 % ------------------------multivariateSeaStorm---------------------------%
 % Purpose: This function creates synthetic time series from tidal guage and
@@ -54,21 +61,24 @@ function [stStorms, stSimStorms] = multivariateSeaStorm(sCopula, ...
 %
 %% -----------------------------------------------------------------------%
 
+cd(sDirectory)
+
 nDays = 365; % for running mean calculation Wahl et al., used 30 
 nMedianYears = 3; % yrs, rep. of recent climate, for time series correction
 
 % thresholds for identifying storms
-nMinDuration = 8; % hr, minimum duration of a storm 
-nZ = 22; % m
+% nZ = 22; % m
 fHs_max  = 0.5 * sqrt(2) * nZ; % m, max wave height, Thorton & Guza [1982]
 nTp_max  = 30; % sec, max peak period
+
+nMinDuration = 8; % hr, minimum duration of a storm 
 nDur_max = 240; % hr, Wahl et al. (2016) (this seems arbitrary)
 
-nStartYear = 1980; % just used for plotting
+% nStartYear = 1980; % just used for plotting
     
 %% -----------------------------------------------------------------------%
 
-% load WIS a tide data
+% load WIS and tide data
 stObs = load_data(sWIS_filename, sWaterLevel_filename);  
     
 % add nan for data gap, shorten water level time series to match waves 
@@ -106,9 +116,11 @@ function stObs = load_data(sWIS_filename, sWaterLevel_filename)
     % save as structure
     stObs = struct();
 
-    % WIS data 1980-2014 (one hour time records, time zone = ?)
+    % WIS data (one hour time records, default when downloading is UTC/GMT time zone)
     % - from Wahl et al., 2016 - used offshore wave buoy in 28 m water depth, 1980-2013
     % - for Barrier3D Reeves et al., 2021 - WIS ST63183, Virgina Coastal Reserve - 22 m water depth
+    % - for CASCADE Van Blunk et al., (in prep) - WIS ST63266, North Core Banks - 24 m water depth
+
     rWISdata = load(sWIS_filename);
     stObs.dtH = datetime(string(rWISdata(:,1)), 'InputFormat', 'yyyyMMddHHmmss');
     stObs.rHs = rWISdata(:,10);
@@ -116,8 +128,9 @@ function stObs = load_data(sWIS_filename, sWaterLevel_filename)
     stObs.rWavD = rWISdata(:,16);
 
     % Water levels from tide gauge (one hour time records, doesn't have to be the same as WIS dt, 
-    % time zone = ?)
+    % default when downloading is UTC/GMT time zone)
     % - for Barrier3D Reeves et al., 2021 - NOAA 8631044, Watchapreague VA
+    % - for CASCADE Van Blunk et al., (in prep) - NOAA 8656483, Beaufort NC
     fid = fopen(sWaterLevel_filename);
     rSLdata = textscan(fid, '%s %f', 'delimiter', '\t');
     fclose(fid); 
@@ -130,20 +143,20 @@ end
 function stObs = process_tides(stObs)
 
     % add nan for data gap, shorten time series of SL if need to
-    stObs.rSL_nan = nan(size(stObs.dtH));  % for VCR, dtH goes to 2014, dtSL 2015
+    stObs.rSL_nan = nan(size(stObs.dtH));  % for VCR, dtH goes to 2014, dtSL 2015; for NCB, dtH goes to 2021, dtSL 2022
     stObs.dtSL_nan = nan(size(stObs.dtH));
     [~, loc] = ismember(stObs.dtSL,stObs.dtH);  % id for mapping dtSL to dtH
     idLoc = loc(loc>0);
     stObs.rSL_nan(idLoc) = stObs.rSL(1:length(idLoc));
     stObs.dtSL_nan(idLoc) = datenum(stObs.dtSL(1:length(idLoc))); % this is for t-tide only
 
-      % for debugging
-%     if bPlot == 1
-%         figure; plot(stObs.dtSL, stObs.rSL, stObs.dtH, stObs.rSL_nan)  
-%         ylabel('Sea level [mNAVD88]')
-%         xlabel('time')
-%         legend('full time series', 'with nan for data gap')
-%     end
+    % for debugging
+    if bPlot == 1
+        figure; plot(stObs.dtSL, stObs.rSL, stObs.dtH, stObs.rSL_nan)  
+        ylabel('Sea level [mNAVD88]')
+        xlabel('time')
+        legend('full time series', 'with nan for data gap and shortened to dtH')
+    end
 
 end
 
@@ -164,8 +177,8 @@ function stObs = remove_nonstationarity(nDays, nMedianYears, stObs)
     stObs.rTp_corr = rTp_rm + median(stObs.rTp(idYrs:end));
 
     % for debugging
-%     min(stObs.rTp_corr) % these get negative with 30-day medians, set to 0 just in case
-%     min(stObs.rHs_corr)
+    % min(stObs.rTp_corr) % these get negative with 30-day medians, set to 0 just in case
+    % min(stObs.rHs_corr)
     stObs.rHs_corr(stObs.rHs_corr<0) = 0;
     stObs.rTp_corr(stObs.rTp_corr<0) = 0;
 
@@ -244,11 +257,14 @@ function stObs = tide_residuals(stObs)
     stObs.rAT_nan(idLoc) = stObs.rAT(1:length(idLoc));
 
       % for debugging
-%     if bPlot == 1
-%         figure; plot(dtSLcorr_sub, rSLcorr_sub, ... % corr SL
-%                     dtSLcorr_sub, stObs.rAT, ... % pred tide
-%                     dtSLcorr_sub, stObs.rNTR) % residual
-%     end
+    if bPlot == 1
+        figure; plot(dtSLcorr_sub, rSLcorr_sub, ... % corr SL
+                    dtSLcorr_sub, stObs.rAT, ... % pred tide
+                    dtSLcorr_sub, stObs.rNTR) % residual
+        ylabel('Sea level [m]')
+        xlabel('time')
+        legend('corrected SL', 'predicted tide', 'non-tidal residual')
+    end
 
 end
 
@@ -256,13 +272,12 @@ function stObs = calculate_TWL(fBeta, stObs, fBermEl)
 
     % calculate R2% and add to SL to get the TWL (currently only corrected data)     
 
-    % KA: is this Stockdon 2006 broken down into components?
-    stObs.rL0   = (9.8 * stObs.rTp_corr.^2) / (2 * pi); % wavelength  
+    stObs.rL0 = (9.8 * stObs.rTp_corr.^2) / (2 * pi); % wavelength  
     rSetup = 0.35 * fBeta * sqrt(stObs.rHs_corr .* stObs.rL0); 
     rSin   = 0.75 * fBeta * sqrt(stObs.rHs_corr .* stObs.rL0);  % incident band swash
     rSig   = 0.06 * sqrt(stObs.rHs_corr .* stObs.rL0) ;         % infragravity band swash
     rSwash = sqrt((rSin.^2) + (rSig.^2));      % total swash
-    stObs.rR2    = 1.1 * (rSetup + (rSwash/2));      % R2%
+    stObs.rR2 = 1.1 * (rSetup + (rSwash/2));      % R2%
 
     % KA: not clear from Wahl if the TWL is the corrected SL+R2...do both?
     stObs.rTWL  = stObs.rSL_corr + stObs.rR2;       % corrected for nonstationarity
@@ -276,7 +291,7 @@ function stObs = calculate_TWL(fBeta, stObs, fBermEl)
         plot(stObs.dtH, stObs.rSL_nan, stObs.dtH, stObs.rSL_corr) %, dtH, movmedian(rSL_nan, N, 'omitnan'))
         ylabel('Sea level [mNAVD88]')
         legend('observed', 'corrected for non-stationarity')
-        title(sprintf('Berm Elev = %d m NAVD88', fBermEl))
+        title(sprintf('Berm Elev = %.2f m NAVD88', fBermEl))
 
         % Hs
         subplot(4,2,2)
@@ -285,7 +300,6 @@ function stObs = calculate_TWL(fBeta, stObs, fBermEl)
         ylim([0 10])
 
         % Tp
-        % KA: note, I think this Tp data is bad between 2013-2014 
         subplot(4,2,3)
         plot(stObs.dtH, stObs.rTp, stObs.dtH, stObs.rTp_corr) %, dtH, movmedian(rTp, N, 'omitnan'))
         ylabel('Tp [s]')
@@ -311,7 +325,7 @@ function stObs = calculate_TWL(fBeta, stObs, fBermEl)
         % R2
         subplot(4,2,7)
         plot(stObs.dtH, stObs.rR2)
-        ylabel('R2/% [m]')
+        ylabel('R2% [m]')
 
         % TWL
         subplot(4,2,8)
@@ -355,7 +369,6 @@ function stStorms = extract_sea_storms_from_obs(fBermEl,nMinDuration,stObs)
     end
 
     % identify Hs threshold to qualify as a storm event, round nearest 0.05 m
-    %rHs_over_yearly(28) = NaN; % Remove year 2007 (anonymously low)?
     nHs_min = min(rHs_over_yearly);
     nHs_threshold = floor(nHs_min / 0.05) * 0.05;     
 
@@ -363,14 +376,13 @@ function stStorms = extract_sea_storms_from_obs(fBermEl,nMinDuration,stObs)
     % nHs_min = mean(rHH(rTT > rBermEl)) - 2 * std(rHH(rTT > rBermEl));
     % nHs_threshold = floor(nHs_min / 0.05) * 0.05
 
-    % visual check of threshold and drivers (this is hard coded to 1980, will 
-    % need to be changed for other locations)
+    % visual check of threshold and drivers
     if bPlot == 1
         figure
         subplot(2,1,1)
         plot(nStartYear : 1 : nStartYear+nYrs-1, [rTWL_over_yearly, rR2_over_yearly, rNTR_over_yearly], '-o')
         ylabel('Contribution to TWL')
-        legend('TWL', 'R2/%', 'NTR')
+        legend('TWL', 'R2%', 'NTR')
         subplot(2,1,2)
         plot(nStartYear : 1 : nStartYear+nYrs-1, rHs_over_yearly, '-o')
         hold on
@@ -461,8 +473,8 @@ function stStorms = extract_sea_storms_from_obs(fBermEl,nMinDuration,stObs)
     end         
 
     % for debugging
-    % figure; scatter(datetime(cell2mat(cStormNegSurgeDT), 'ConvertFrom', 'datenum'), ...
-    %    cell2mat(cStormNegSurgeNTR))
+    figure; scatter(datetime(cell2mat(cStormNegSurgeDT), 'ConvertFrom', 'datenum'), ...
+       cell2mat(cStormNegSurgeNTR))
 
     % create structure of storm parameters
     stStorms = struct();
@@ -481,35 +493,35 @@ function stStorms = extract_sea_storms_from_obs(fBermEl,nMinDuration,stObs)
     stStorms.nHs_threshold = nHs_threshold;
     stStorms.nStorms = length(stStorms.rTWL);
 
-%     if bPlot == 1
-%         % Plot storm TWL, Hs, Dur, Tp, NTR, AT histogram
-%         figure
-%         subplot(2,3,1)
-%         hist(stStorms.rTWL, 50)
-%         ylabel('Storm TWL [m NAVD88]')
-%         title(sprintf('Berm Elev = %d m NAVD88', fBermEl)) 
-% 
-%         subplot(2,3,2)
-%         hist(stStorms.rHs, 50)
-%         ylabel('Storm Hs [m]')
-%         %title('1980 - 2014')
-% 
-%         subplot(2,3,3)
-%         hist(stStorms.rDur, 50)
-%         ylabel('Storm Dur [hrs]')
-% 
-%         subplot(2,3,4)
-%         hist(stStorms.rTp, 50)
-%         ylabel('Storm Tp [s]')
-% 
-%         subplot(2,3,5)
-%         hist(stStorms.rNTR, 50)
-%         ylabel('Storm \eta_{NTR} [m]')
-% 
-%         subplot(2,3,6)
-%         hist(stStorms.rAT, 50)
-%         ylabel('Storm \eta_{A} [m NAVD88]')
-%     end
+    if bPlot == 1
+        % Plot storm TWL, Hs, Dur, Tp, NTR, AT histogram
+        figure
+        subplot(2,3,1)
+        hist(stStorms.rTWL, 50)
+        ylabel('Storm TWL [m NAVD88]')
+        title(sprintf('Berm Elev = %.2f m NAVD88', fBermEl)) 
+
+        subplot(2,3,2)
+        hist(stStorms.rHs, 50)
+        ylabel('Storm Hs [m]')
+        %title('1980 - 2014')
+
+        subplot(2,3,3)
+        hist(stStorms.rDur, 50)
+        ylabel('Storm Dur [hrs]')
+
+        subplot(2,3,4)
+        hist(stStorms.rTp, 50)
+        ylabel('Storm Tp [s]')
+
+        subplot(2,3,5)
+        hist(stStorms.rNTR, 50)
+        ylabel('Storm \eta_{NTR} [m]')
+
+        subplot(2,3,6)
+        hist(stStorms.rAT, 50)
+        ylabel('Storm \eta_{A} [m NAVD88]')
+    end
 
 end
 
@@ -580,7 +592,7 @@ function [stStorms, stSimStorms] = mssm(sCopula, nSimStorm, stStorms)
     % Compute Kendall's Corelation Coefficient for each pair using the ECDF
     % NOTE: if pval(a,b) is small (less than 0.05), then the correlation 
     % rho(a,b) is significantly different from zero
-    [stStorms.rTau, ~] = corr([rU1, rU2, rU3, rU4], 'type', 'kendall');
+    [stStorms.rTau, pval] = corr([rU1, rU2, rU3, rU4], 'type', 'kendall');
     %[rTau, pval] = corr(data, 'type', 'kendall'); % same as above
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -599,8 +611,8 @@ function [stStorms, stSimStorms] = mssm(sCopula, nSimStorm, stStorms)
             'precision',12)
         dlmwrite('Inputs_mssm.txt',nSimStorm,'delimiter',...
             '\t','precision',12)
-%         system('/Users/KatherineAnardeWheels/PyCharmProjects/Barrier3D/Tools/Multivariate_Sea_Storm_Model/mssmVines.R');
-        system('./mssmVines.R');
+        system('/Users/KatherineAnardeWheels/PyCharmProjects/Multivariate_Sea_Storm_Model/mssmVines.R');
+        % system('./mssmVines.R');
 
     elseif sCopula == "gaussian"
         % returns an estimate, rhohat, of the matrix of linear correlation 
